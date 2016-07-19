@@ -134,7 +134,7 @@ void CYSFRX::processData()
   q15_t centre    = (m_centre[0U]    + m_centre[1U]    + m_centre[2U]    + m_centre[3U])    >> 2;
   q15_t threshold = (m_threshold[0U] + m_threshold[1U] + m_threshold[2U] + m_threshold[3U]) >> 2;
 
-  uint16_t ptr = m_endPtr + YSF_RADIO_SYMBOL_LENGTH + 1U;
+  uint16_t ptr = m_endPtr + YSF_RADIO_SYMBOL_LENGTH;
   if (ptr >= YSF_FRAME_LENGTH_SAMPLES)
     ptr -= YSF_FRAME_LENGTH_SAMPLES;
 
@@ -284,7 +284,7 @@ void CYSFRX::processSync()
   if (m_syncEndPtr >= YSF_FRAME_LENGTH_SAMPLES)
     m_syncEndPtr -= YSF_FRAME_LENGTH_SAMPLES;
 
-  m_endPtr = m_samplePtr + YSF_FRAME_LENGTH_SAMPLES - YSF_SYNC_LENGTH_SAMPLES - 1U;
+  m_endPtr = m_samplePtr + YSF_FRAME_LENGTH_SAMPLES - YSF_SYNC_LENGTH_SAMPLES;
   if (m_endPtr >= YSF_FRAME_LENGTH_SAMPLES)
     m_endPtr -= YSF_FRAME_LENGTH_SAMPLES;
 }
