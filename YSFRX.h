@@ -36,22 +36,24 @@ public:
   void reset();
 
 private:
-  uint32_t    m_pll;
-  bool        m_prev;
   YSFRX_STATE m_state;
-  uint32_t    m_symbolBuffer;
-  uint64_t    m_bitBuffer;
-  q15_t       m_symbols[YSF_SYNC_LENGTH_SYMBOLS];
-  uint8_t     m_outBuffer[YSF_FRAME_LENGTH_BYTES + 1U];
-  uint8_t*    m_buffer;
-  uint16_t    m_bufferPtr;
-  uint16_t    m_symbolPtr;
+  uint32_t    m_bits[YSF_RADIO_SYMBOL_LENGTH];
+  q15_t       m_samples[YSF_FRAME_LENGTH_SAMPLES];
+  uint16_t    m_bitPtr;
+  uint16_t    m_samplePtr;
+  uint16_t    m_syncPtr;
+  uint16_t    m_syncStartPtr;
+  uint16_t    m_syncEndPtr;
+  uint16_t    m_endPtr;
   uint16_t    m_lostCount;
-  q15_t       m_centre;
-  q15_t       m_threshold;
+  q31_t       m_maxCorr;
+  q15_t       m_centre[4U];
+  q15_t       m_threshold[4U];
+  uint8_t     m_averagePtr;
 
-  void processNone(q15_t sample);
-  void processData(q15_t sample);
+  void process(q15_t sample);
+  void processData();
+  void processSync();
 };
 
 #endif
