@@ -134,7 +134,7 @@ void CDMRIdleRX::processSample(q15_t sample)
   if (m_dataPtr == m_endPtr) {
     uint16_t ptr = m_endPtr + DMR_RADIO_SYMBOL_LENGTH + 1U;
     if (ptr >= DMR_FRAME_LENGTH_SAMPLES)
-	  ptr -= DMR_FRAME_LENGTH_SAMPLES;
+	    ptr -= DMR_FRAME_LENGTH_SAMPLES;
 
     uint8_t frame[DMR_FRAME_LENGTH_BYTES + 1U];
     samplesToBits(ptr, DMR_FRAME_LENGTH_SYMBOLS, frame, 8U, m_centre, m_threshold);
