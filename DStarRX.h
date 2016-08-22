@@ -32,7 +32,7 @@ class CDStarRX {
 public:
   CDStarRX();
 
-  void samples(const q15_t* samples, uint8_t length);
+  void samples(const q15_t* samples, const uint16_t* rssi, uint8_t length);
 
   void reset();
 
@@ -53,6 +53,7 @@ private:
   uint8_t      m_fecOutput[42U];
   q15_t        m_samples[DSTAR_DATA_SYNC_LENGTH_BITS];
   uint8_t      m_samplesPtr;
+  uint16_t     m_rssi;
   uint16_t     m_rssiCount;
 
   void    processNone(bool bit);

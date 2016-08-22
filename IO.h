@@ -22,6 +22,12 @@
 #include "Globals.h"
 
 #include "SampleRB.h"
+#include "RssiRB.h"
+
+enum ADC_SOURCE {
+  ADCS_AUDIO,
+  ADCS_RSSI
+};
 
 class CIO {
 public:
@@ -52,10 +58,6 @@ public:
 
   void resetWatchdog();
 
-#if defined(SEND_RSSI_DATA)
-  uint16_t getRSSIValue();
-#endif
-
 private:
 #if defined(__MBED__)
   DigitalOut           m_pinPTT;
@@ -72,6 +74,7 @@ private:
   bool                 m_started;
 
   CSampleRB            m_rxBuffer;
+  CRssiRB              m_rssiBuffer;
   CSampleRB            m_txBuffer;
 
   arm_fir_instance_q15 m_C4FSKFilter;
@@ -99,6 +102,8 @@ private:
   volatile uint32_t    m_watchdog;
 
   bool                 m_lockout;
+
+  ADC_SOURCE           m_source;
 };
 
 #endif

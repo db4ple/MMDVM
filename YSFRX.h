@@ -31,7 +31,7 @@ class CYSFRX {
 public:
   CYSFRX();
 
-  void samples(const q15_t* samples, uint8_t length);
+  void samples(const q15_t* samples, const uint16_t* rssi, uint8_t length);
 
   void reset();
 
@@ -47,6 +47,7 @@ private:
   uint16_t    m_bufferPtr;
   uint16_t    m_symbolPtr;
   uint16_t    m_lostCount;
+  uint16_t    m_rssi;
   uint16_t    m_rssiCount;
   q15_t       m_centre;
   q15_t       m_threshold;

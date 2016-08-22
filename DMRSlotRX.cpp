@@ -94,7 +94,7 @@ void CDMRSlotRX::reset()
   m_rssiCount = 0U;
 }
 
-bool CDMRSlotRX::processSample(q15_t sample)
+bool CDMRSlotRX::processSample(q15_t sample, uint16_t rssi)
 {
   m_delayPtr++;
   if (m_delayPtr < m_delay)
@@ -125,8 +125,8 @@ bool CDMRSlotRX::processSample(q15_t sample)
   } else {
 #if defined(SEND_RSSI_DATA)
     // Grab the RSSI data during the frame
-    if (m_state == DMRRXS_VOICE && m_dataPtr == m_startPtr && m_rssiCount == 2U)
-      m_rssi = io.getRSSIValue();
+    if (m_state == DMRRXS_VOICE && m_dataPtr == m_syncPtr && m_rssiCount == 2U)
+      m_rssi = rssi;
 #endif
     uint16_t min = m_syncPtr - 1U;
     uint16_t max = m_syncPtr + 1U;

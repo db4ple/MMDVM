@@ -261,6 +261,7 @@ m_pathMemory3(),
 m_fecOutput(),
 m_samples(),
 m_samplesPtr(0U),
+m_rssi(0U),
 m_rssiCount(0U)
 {
 }
@@ -277,8 +278,10 @@ void CDStarRX::reset()
   m_rssiCount     = 0U;
 }
 
-void CDStarRX::samples(const q15_t* samples, uint8_t length)
+void CDStarRX::samples(const q15_t* samples, const uint16_t* rssi, uint8_t length)
 {
+  m_rssi = rssi[0U];
+
   for (uint16_t i = 0U; i < length; i++) {
     m_samples[m_samplesPtr] = samples[i];
 
@@ -466,9 +469,8 @@ void CDStarRX::processData(bool bit)
 #if defined(SEND_RSSI_DATA)
     // Send RSSI data every second
     if (m_rssiCount == 0U) {
-      uint16_t rssi = io.getRSSIValue();
-      m_rxBuffer[12U] = (rssi >> 8) & 0xFFU;
-      m_rxBuffer[13U] = (rssi >> 0) & 0xFFU;
+      m_rxBuffer[12U] = (m_rssi >> 8) & 0xFFU;
+      m_rxBuffer[13U] = (m_rssi >> 0) & 0xFFU;
       serial.writeDStarData(m_rxBuffer, DSTAR_DATA_LENGTH_BYTES + 2U);
     } else {
       serial.writeDStarData(m_rxBuffer, DSTAR_DATA_LENGTH_BYTES);

@@ -54,6 +54,7 @@ m_buffer(NULL),
 m_bufferPtr(0U),
 m_symbolPtr(0U),
 m_lostCount(0U),
+m_rssi(0U),
 m_rssiCount(0U),
 m_centre(0),
 m_threshold(0)
@@ -75,8 +76,10 @@ void CYSFRX::reset()
   m_threshold = 0;
 }
 
-void CYSFRX::samples(const q15_t* samples, uint8_t length)
+void CYSFRX::samples(const q15_t* samples, const uint16_t* rssi, uint8_t length)
 {
+  m_rssi = rssi[0U];
+
   for (uint16_t i = 0U; i < length; i++) {
     bool bit = samples[i] < 0;
 
@@ -239,9 +242,8 @@ void CYSFRX::processData(q15_t sample)
 #if defined(SEND_RSSI_DATA)
       // Send RSSI data every second
       if (m_rssiCount == 0U) {
-        uint16_t rssi = io.getRSSIValue();
-        m_outBuffer[121U] = (rssi >> 8) & 0xFFU;
-        m_outBuffer[122U] = (rssi >> 0) & 0xFFU;
+        m_outBuffer[121U] = (m_rssi >> 8) & 0xFFU;
+        m_outBuffer[122U] = (m_rssi >> 0) & 0xFFU;
         serial.writeYSFData(m_outBuffer, YSF_FRAME_LENGTH_BYTES + 3U);
       } else {
         serial.writeYSFData(m_outBuffer, YSF_FRAME_LENGTH_BYTES + 1U);

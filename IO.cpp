@@ -49,9 +49,9 @@ const uint16_t DC_OFFSET = 2048U;
 #define PIN_COS                7
 #define PIN_PTT                8
 #define PIN_COSLED             11
-#define ADC_CHER_Chan          (1<<7)                 // ADC on Due pin A0  - Due AD7 - (1 << 7)
-#define ADC_ISR_EOC_Chan       ADC_ISR_EOC7
-#define ADC_CDR_Chan           7
+#define ADC_CHER_AUDIO         (1<<7)                 // ADC on Due pin A0  - Due AD7 - (1 << 7)
+#define ADC_ISR_EOC_AUDIO      ADC_ISR_EOC7
+#define ADC_CDR_AUDIO          7
 #define DACC_MR_USER_SEL_Chan  DACC_MR_USER_SEL_CHANNEL0 // DAC on Due DAC0
 #define DACC_CHER_Chan         DACC_CHER_CH0
 #elif defined(ARDUINO_DUE_ZUM_V10)
@@ -61,10 +61,12 @@ const uint16_t DC_OFFSET = 2048U;
 #define PIN_DSTAR              9
 #define PIN_DMR                8
 #define PIN_YSF                7
-#define PIN_RSSI               60                     // ADC on Due pin A6 - Due AD1
-#define ADC_CHER_Chan          (1<<13)                // ADC on Due pin A11 - Due AD13 - (1 << 13) (PB20)
-#define ADC_ISR_EOC_Chan       ADC_ISR_EOC13
-#define ADC_CDR_Chan           13
+#define ADC_CHER_AUDIO         (1<<13)                // ADC on Due pin A11 - Due AD13 - (1 << 13) (PB20)
+#define ADC_ISR_EOC_AUDIO      ADC_ISR_EOC13
+#define ADC_CDR_AUDIO          13
+#define ADC_CHER_RSSI          (1<<1)                 // ADC on Due pin A6 - Due AD1 - (1 << 1) (PA3)
+#define ADC_ISR_EOC_RSSI       ADC_ISR_EOC1
+#define ADC_CDR_RSSI           1
 #define DACC_MR_USER_SEL_Chan  DACC_MR_USER_SEL_CHANNEL1 // DAC on Due DAC1
 #define DACC_CHER_Chan         DACC_CHER_CH1
 #elif defined(ARDUINO_DUE_NTH)
@@ -74,9 +76,9 @@ const uint16_t DC_OFFSET = 2048U;
 #define PIN_DSTAR              9
 #define PIN_DMR                8
 #define PIN_YSF                7
-#define ADC_CHER_Chan          (1<<7)                 // ADC on Due pin A0  - Due AD7 - (1 << 7)
-#define ADC_ISR_EOC_Chan       ADC_ISR_EOC7
-#define ADC_CDR_Chan           7
+#define ADC_CHER_AUDIO         (1<<7)                 // ADC on Due pin A0  - Due AD7 - (1 << 7)
+#define ADC_ISR_EOC_AUDIO      ADC_ISR_EOC7
+#define ADC_CDR_AUDIO          7
 #define DACC_MR_USER_SEL_Chan  DACC_MR_USER_SEL_CHANNEL0 // DAC on Due DAC0
 #define DACC_CHER_Chan         DACC_CHER_CH0
 #else
@@ -96,12 +98,7 @@ const uint16_t DC_OFFSET = 2048U;
 extern "C" {
   void ADC_Handler()
   {
-#if defined(__SAM3X8E__)
-    if (ADC->ADC_ISR & ADC_ISR_EOC_Chan)          // Ensure there was an End-of-Conversion and we read the ISR reg
-      io.interrupt();
-#elif defined(__MBED__)
     io.interrupt();
-#endif
   }
 }
 
@@ -117,6 +114,7 @@ m_ticker(),
 #endif
 m_started(false),
 m_rxBuffer(RX_RINGBUFFER_SIZE),
+m_rssiBuffer(RX_RINGBUFFER_SIZE),
 m_txBuffer(TX_RINGBUFFER_SIZE),
 m_C4FSKFilter(),
 m_GMSKFilter(),
@@ -135,7 +133,8 @@ m_adcOverflow(0U),
 m_dacOverflow(0U),
 m_count(0U),
 m_watchdog(0U),
-m_lockout(false)
+m_lockout(false),
+m_source(ADCS_AUDIO)
 {
   ::memset(m_C4FSKState, 0x00U, 70U * sizeof(q15_t));
   ::memset(m_GMSKState,  0x00U, 40U * sizeof(q15_t));
@@ -161,11 +160,6 @@ m_lockout(false)
   pinMode(PIN_DMR,    OUTPUT);
   pinMode(PIN_YSF,    OUTPUT);
 #endif
-
-#if defined(SEND_RSSI_DATA)
-  pinMode(PIN_RSSI,   INPUT);
-  analogReadResolution(12);
-#endif
 #endif
 }
 
@@ -175,61 +169,61 @@ void CIO::start()
     return;
 
 #if defined(__SAM3X8E__)
-  if (ADC->ADC_ISR & ADC_ISR_EOC_Chan)        // Ensure there was an End-of-Conversion and we read the ISR reg
+  if (ADC->ADC_ISR & ADC_ISR_EOC_AUDIO)           // Ensure there was an End-of-Conversion and we read the ISR reg
     io.interrupt();
 
   // Set up the ADC
-  NVIC_EnableIRQ(ADC_IRQn);                   // Enable ADC interrupt vector
-  ADC->ADC_IDR  = 0xFFFFFFFF;                 // Disable interrupts
-  ADC->ADC_IER  = ADC_CHER_Chan;              // Enable End-Of-Conv interrupt
-  ADC->ADC_CHDR = 0xFFFF;                     // Disable all channels
-  ADC->ADC_CHER = ADC_CHER_Chan;              // Enable just one channel
-  ADC->ADC_CGR  = 0x15555555;                 // All gains set to x1
-  ADC->ADC_COR  = 0x00000000;                 // All offsets off
+  NVIC_EnableIRQ(ADC_IRQn);                       // Enable ADC interrupt vector
+  ADC->ADC_IDR  = 0xFFFFFFFF;                     // Disable interrupts
+  ADC->ADC_IER  = ADC_CHER_AUDIO | ADC_CHER_RSSI; // Enable End-Of-Conv interrupts
+  ADC->ADC_CHDR = 0xFFFF;                         // Disable all channels
+  ADC->ADC_CHER = ADC_CHER_AUDIO;                 // Enable the audio channel
+  ADC->ADC_CGR  = 0x15555555;                     // All gains set to x1
+  ADC->ADC_COR  = 0x00000000;                     // All offsets off
   ADC->ADC_MR   = (ADC->ADC_MR & 0xFFFFFFF0) | (1 << 1) | ADC_MR_TRGEN;  // 1 = trig source TIO from TC0
 
 #if defined(EXTERNAL_OSC)
   // Set up the external clock input on PA4 = AI5
-  REG_PIOA_ODR   = 0x10;                      // Set pin as input
-  REG_PIOA_PDR   = 0x10;                      // Disable PIO A bit 4
-  REG_PIOA_ABSR &= ~0x10;                     // Select A peripheral = TCLK1 Input
+  REG_PIOA_ODR   = 0x10;                          // Set pin as input
+  REG_PIOA_PDR   = 0x10;                          // Disable PIO A bit 4
+  REG_PIOA_ABSR &= ~0x10;                         // Select A peripheral = TCLK1 Input
 #endif
 
   // Set up the timer
   pmc_enable_periph_clk(TC_INTERFACE_ID + 0*3+0) ;  // Clock the TC0 channel 0
-  TcChannel* t = &(TC0->TC_CHANNEL)[0];       // Pointer to TC0 registers for its channel 0
-  t->TC_CCR = TC_CCR_CLKDIS;                  // Disable internal clocking while setup regs
-  t->TC_IDR = 0xFFFFFFFF;                     // Disable interrupts
-  t->TC_SR;                                   // Read int status reg to clear pending
+  TcChannel* t = &(TC0->TC_CHANNEL)[0];           // Pointer to TC0 registers for its channel 0
+  t->TC_CCR = TC_CCR_CLKDIS;                      // Disable internal clocking while setup regs
+  t->TC_IDR = 0xFFFFFFFF;                         // Disable interrupts
+  t->TC_SR;                                       // Read int status reg to clear pending
 #if defined(EXTERNAL_OSC)
-  t->TC_CMR = TC_CMR_TCCLKS_XC1 |             // Use XC1 = TCLK1 external clock
+  t->TC_CMR = TC_CMR_TCCLKS_XC1 |                 // Use XC1 = TCLK1 external clock
 #else
-  t->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1 |    // Use TCLK1 (prescale by 2, = 42MHz)
+  t->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1 |        // Use TCLK1 (prescale by 2, = 42MHz)
 #endif
-    TC_CMR_WAVE |                             // Waveform mode
-    TC_CMR_WAVSEL_UP_RC |                     // Count-up PWM using RC as threshold
-    TC_CMR_EEVT_XC0 |                         // Set external events from XC0 (this setup TIOB as output)
+    TC_CMR_WAVE |                                 // Waveform mode
+    TC_CMR_WAVSEL_UP_RC |                         // Count-up PWM using RC as threshold
+    TC_CMR_EEVT_XC0 |                             // Set external events from XC0 (this setup TIOB as output)
     TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_CLEAR |
     TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_CLEAR;
 #if defined(EXTERNAL_OSC)
-  t->TC_RC  = EXTERNAL_OSC / 24000;           // Counter resets on RC, so sets period in terms of the external clock
-  t->TC_RA  = EXTERNAL_OSC / 48000;           // Roughly square wave
+  t->TC_RC  = EXTERNAL_OSC / 48000;               // Counter resets on RC, so sets period in terms of the external clock
+  t->TC_RA  = EXTERNAL_OSC / 96000;               // Roughly square wave
 #else
-  t->TC_RC  = 1750;                           // Counter resets on RC, so sets period in terms of 42MHz internal clock
-  t->TC_RA  = 880;                            // Roughly square wave
+  t->TC_RC  = 875;                                // Counter resets on RC, so sets period in terms of 42MHz internal clock
+  t->TC_RA  = 438;                                // Roughly square wave
 #endif
   t->TC_CMR = (t->TC_CMR & 0xFFF0FFFF) | TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_SET;  // Set clear and set from RA and RC compares
-  t->TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;    // re-enable local clocking and switch to hardware trigger source.
+  t->TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;        // Re-enable local clocking and switch to hardware trigger source.
 
   // Set up the DAC
-  pmc_enable_periph_clk(DACC_INTERFACE_ID);   // Start clocking DAC
-  DACC->DACC_CR = DACC_CR_SWRST;              // Reset DAC
+  pmc_enable_periph_clk(DACC_INTERFACE_ID);       // Start clocking DAC
+  DACC->DACC_CR = DACC_CR_SWRST;                  // Reset DAC
   DACC->DACC_MR =
-  DACC_MR_TRGEN_EN | DACC_MR_TRGSEL(1) |      // Trigger 1 = TIO output of TC0
-    DACC_MR_USER_SEL_Chan |                   // Select channel
-    (24 << DACC_MR_STARTUP_Pos);              // 24 = 1536 cycles which I think is in range 23..45us since DAC clock = 42MHz
-  DACC->DACC_IDR  = 0xFFFFFFFF;               // No interrupts
-  DACC->DACC_CHER = DACC_CHER_Chan;           // Enable channel
+  DACC_MR_TRGEN_EN | DACC_MR_TRGSEL(1) |          // Trigger 1 = TIO output of TC0
+    DACC_MR_USER_SEL_Chan |                       // Select channel
+    (24 << DACC_MR_STARTUP_Pos);                  // 24 = 1536 cycles which I think is in range 23..45us since DAC clock = 42MHz
+  DACC->DACC_IDR  = 0xFFFFFFFF;                   // No interrupts
+  DACC->DACC_CHER = DACC_CHER_Chan;               // Enable channel
 
   digitalWrite(PIN_PTT, m_pttInvert ? HIGH : LOW);
   digitalWrite(PIN_COSLED, LOW);
@@ -242,6 +236,7 @@ void CIO::start()
   m_pinLED.write(1);
 #endif
 
+  m_source  = ADCS_AUDIO;
   m_count   = 0U;
   m_started = true;
 
@@ -253,7 +248,7 @@ void CIO::process()
   m_ledCount++;
   if (m_started) {
     // Two seconds timeout
-    if (m_watchdog >= 48000U) {
+    if (m_watchdog >= 96000U) {
       if (m_modemState == STATE_DSTAR || m_modemState == STATE_DMR || m_modemState == STATE_YSF) {
         if (m_modemState == STATE_DMR && m_tx)
           dmrTX.setStart(false);
@@ -264,7 +259,7 @@ void CIO::process()
       m_watchdog = 0U;
     }
 
-    if (m_ledCount >= 24000U) {
+    if (m_ledCount >= 48000U) {
       m_ledCount = 0U;
       m_ledValue = !m_ledValue;
 #if defined(__MBED__)
@@ -274,7 +269,7 @@ void CIO::process()
 #endif
     }
   } else {
-    if (m_ledCount >= 240000U) {
+    if (m_ledCount >= 480000U) {
       m_ledCount = 0U;
       m_ledValue = !m_ledValue;
 #if defined(__MBED__)
@@ -305,14 +300,17 @@ void CIO::process()
   }
 
   if (m_rxBuffer.getData() >= RX_BLOCK_SIZE) {
-    q15_t   samples[RX_BLOCK_SIZE + 1U];
-    uint8_t control[RX_BLOCK_SIZE + 1U];
+    q15_t    samples[RX_BLOCK_SIZE + 1U];
+    uint8_t  control[RX_BLOCK_SIZE + 1U];
+    uint16_t rssi[RX_BLOCK_SIZE + 1U];
 
     uint8_t blockSize = RX_BLOCK_SIZE;
 
     for (uint16_t i = 0U; i < RX_BLOCK_SIZE; i++) {
       uint16_t sample;
       m_rxBuffer.get(sample, control[i]);
+
+      m_rssiBuffer.get(rssi[i]);
 
       // Detect ADC overflow
       if (m_detect && (sample == 0U || sample == 4095U))
@@ -351,7 +349,7 @@ void CIO::process()
         q15_t GMSKVals[RX_BLOCK_SIZE + 1U];
         ::arm_fir_fast_q15(&m_GMSKFilter, samples, GMSKVals, blockSize);
 
-        dstarRX.samples(GMSKVals, blockSize);
+        dstarRX.samples(GMSKVals, rssi, blockSize);
       }
 
       if (m_dmrEnable || m_ysfEnable) {
@@ -362,14 +360,14 @@ void CIO::process()
           dmrIdleRX.samples(C4FSKVals, blockSize);
 
         if (m_ysfEnable)
-          ysfRX.samples(C4FSKVals, blockSize);
+          ysfRX.samples(C4FSKVals, rssi, blockSize);
       }
     } else if (m_modemState == STATE_DSTAR) {
       if (m_dstarEnable) {
         q15_t GMSKVals[RX_BLOCK_SIZE + 1U];
         ::arm_fir_fast_q15(&m_GMSKFilter, samples, GMSKVals, blockSize);
 
-        dstarRX.samples(GMSKVals, blockSize);
+        dstarRX.samples(GMSKVals, rssi, blockSize);
       }
     } else if (m_modemState == STATE_DMR) {
       if (m_dmrEnable) {
@@ -378,7 +376,7 @@ void CIO::process()
 
         // If the transmitter isn't on, use the DMR idle RX to detect the wakeup CSBKs
         if (m_tx)
-          dmrRX.samples(C4FSKVals, control, blockSize);
+          dmrRX.samples(C4FSKVals, rssi, control, blockSize);
         else
           dmrIdleRX.samples(C4FSKVals, blockSize);
       }
@@ -387,7 +385,7 @@ void CIO::process()
         q15_t C4FSKVals[RX_BLOCK_SIZE + 1U];
         ::arm_fir_fast_q15(&m_C4FSKFilter, samples, C4FSKVals, blockSize);
 
-        ysfRX.samples(C4FSKVals, blockSize);
+        ysfRX.samples(C4FSKVals, rssi, blockSize);
       }
     } else if (m_modemState == STATE_DSTARCAL) {
       q15_t GMSKVals[RX_BLOCK_SIZE + 1U];
@@ -452,20 +450,41 @@ uint16_t CIO::getSpace() const
 
 void CIO::interrupt()
 {
+#if defined(__SAM3X8E__)
+  if (m_source == ADCS_AUDIO) {
+    if ((ADC->ADC_ISR & ADC_ISR_EOC_AUDIO) == 0x00U)          // Ensure there was an End-of-Conversion and we read the ISR reg
+      return;
+  } else {
+    if ((ADC->ADC_ISR & ADC_ISR_EOC_RSSI) == 0x00U)           // Ensure there was an End-of-Conversion and we read the ISR reg
+      return;
+  }
+#endif
+
   uint8_t control = MARK_NONE;
   uint16_t sample = DC_OFFSET;
 
-  m_txBuffer.get(sample, control);
-
 #if defined(__SAM3X8E__)
-  DACC->DACC_CDR = sample;
-  sample = ADC->ADC_CDR[ADC_CDR_Chan];
+  if (m_source == ADCS_AUDIO) {
+    m_txBuffer.get(sample, control);
+    DACC->DACC_CDR = sample;
+
+    sample = ADC->ADC_CDR[ADC_CDR_AUDIO];
+    m_rxBuffer.put(sample, control);
+
+    ADC->ADC_CHER = ADC_CHER_RSSI;                  // Enable the RSSI channel
+    m_source = ADCS_RSSI;
+  } else {
+    sample = ADC->ADC_CDR[ADC_CDR_RSSI];
+    m_rssiBuffer.put(sample);
+
+    ADC->ADC_CHER = ADC_CHER_AUDIO;                 // Enable the audio channel
+    m_source = ADCS_AUDIO;
+  }
 #elif defined(__MBED__)
   m_pinDAC.write_u16(sample);
   sample = m_pinADC.read_u16();
-#endif
-
   m_rxBuffer.put(sample, control);
+#endif
 
   m_watchdog++;
 }
@@ -570,9 +589,3 @@ bool CIO::hasLockout() const
   return m_lockout;
 }
 
-#if defined(SEND_RSSI_DATA)
-uint16_t CIO::getRSSIValue()
-{
-  return analogRead(PIN_RSSI);
-}
-#endif
