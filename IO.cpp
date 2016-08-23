@@ -52,8 +52,8 @@ const uint16_t DC_OFFSET = 2048U;
 #define ADC_CHER_AUDIO         (1<<7)                 // ADC on Due pin A0  - Due AD7 - (1 << 7)
 #define ADC_ISR_EOC_AUDIO      ADC_ISR_EOC7
 #define ADC_CDR_AUDIO          7
-#define DACC_MR_USER_SEL_Chan  DACC_MR_USER_SEL_CHANNEL0 // DAC on Due DAC0
-#define DACC_CHER_Chan         DACC_CHER_CH0
+#define DACC_MR_USER_SEL_AUDIO DACC_MR_USER_SEL_CHANNEL0 // DAC on Due DAC0
+#define DACC_CHER_AUDIO        DACC_CHER_CH0
 #elif defined(ARDUINO_DUE_ZUM_V10)
 #define PIN_COS                52
 #define PIN_PTT                23
@@ -67,8 +67,8 @@ const uint16_t DC_OFFSET = 2048U;
 #define ADC_CHER_RSSI          (1<<1)                 // ADC on Due pin A6 - Due AD1 - (1 << 1) (PA3)
 #define ADC_ISR_EOC_RSSI       ADC_ISR_EOC1
 #define ADC_CDR_RSSI           1
-#define DACC_MR_USER_SEL_Chan  DACC_MR_USER_SEL_CHANNEL1 // DAC on Due DAC1
-#define DACC_CHER_Chan         DACC_CHER_CH1
+#define DACC_MR_USER_SEL_AUDIO DACC_MR_USER_SEL_CHANNEL1 // DAC on Due DAC1
+#define DACC_CHER_AUDIO        DACC_CHER_CH1
 #elif defined(ARDUINO_DUE_NTH)
 #define PIN_COS                A7
 #define PIN_PTT                A8
@@ -79,8 +79,8 @@ const uint16_t DC_OFFSET = 2048U;
 #define ADC_CHER_AUDIO         (1<<7)                 // ADC on Due pin A0  - Due AD7 - (1 << 7)
 #define ADC_ISR_EOC_AUDIO      ADC_ISR_EOC7
 #define ADC_CDR_AUDIO          7
-#define DACC_MR_USER_SEL_Chan  DACC_MR_USER_SEL_CHANNEL0 // DAC on Due DAC0
-#define DACC_CHER_Chan         DACC_CHER_CH0
+#define DACC_MR_USER_SEL_AUDIO DACC_MR_USER_SEL_CHANNEL0 // DAC on Due DAC0
+#define DACC_CHER_AUDIO        DACC_CHER_CH0
 #else
 #error "Either ARDUINO_DUE_PAPA, ARDUINO_DUE_ZUM_V10, or ARDUINO_DUE_NTH need to be defined"
 #endif
@@ -134,7 +134,8 @@ m_dacOverflow(0U),
 m_count(0U),
 m_watchdog(0U),
 m_lockout(false),
-m_source(ADCS_AUDIO)
+m_source(ADCS_AUDIO),
+m_txValue(DC_OFFSET)
 {
   ::memset(m_C4FSKState, 0x00U, 70U * sizeof(q15_t));
   ::memset(m_GMSKState,  0x00U, 40U * sizeof(q15_t));
@@ -169,13 +170,13 @@ void CIO::start()
     return;
 
 #if defined(__SAM3X8E__)
-  if (ADC->ADC_ISR & ADC_ISR_EOC_AUDIO)           // Ensure there was an End-of-Conversion and we read the ISR reg
-    io.interrupt();
+  if ((ADC->ADC_ISR & ADC_ISR_EOC_AUDIO) == ADC_ISR_EOC_AUDIO)  // Ensure there was an End-of-Conversion and we read the ISR reg
+    ADC->ADC_CDR[ADC_CDR_AUDIO];
 
   // Set up the ADC
   NVIC_EnableIRQ(ADC_IRQn);                       // Enable ADC interrupt vector
   ADC->ADC_IDR  = 0xFFFFFFFF;                     // Disable interrupts
-  ADC->ADC_IER  = ADC_CHER_AUDIO | ADC_CHER_RSSI; // Enable End-Of-Conv interrupts
+  ADC->ADC_IER  = ADC_CHER_AUDIO;                 // Enable audio End-Of-Conv interrupts
   ADC->ADC_CHDR = 0xFFFF;                         // Disable all channels
   ADC->ADC_CHER = ADC_CHER_AUDIO;                 // Enable the audio channel
   ADC->ADC_CGR  = 0x15555555;                     // All gains set to x1
@@ -218,12 +219,11 @@ void CIO::start()
   // Set up the DAC
   pmc_enable_periph_clk(DACC_INTERFACE_ID);       // Start clocking DAC
   DACC->DACC_CR = DACC_CR_SWRST;                  // Reset DAC
-  DACC->DACC_MR =
-  DACC_MR_TRGEN_EN | DACC_MR_TRGSEL(1) |          // Trigger 1 = TIO output of TC0
-    DACC_MR_USER_SEL_Chan |                       // Select channel
+  DACC->DACC_MR = DACC_MR_TRGEN_EN | DACC_MR_TRGSEL(1) |    // Trigger 1 = TIO output of TC0
+    DACC_MR_USER_SEL_AUDIO |                      // Select channel
     (24 << DACC_MR_STARTUP_Pos);                  // 24 = 1536 cycles which I think is in range 23..45us since DAC clock = 42MHz
   DACC->DACC_IDR  = 0xFFFFFFFF;                   // No interrupts
-  DACC->DACC_CHER = DACC_CHER_Chan;               // Enable channel
+  DACC->DACC_CHER = DACC_CHER_AUDIO;              // Enable channel
 
   digitalWrite(PIN_PTT, m_pttInvert ? HIGH : LOW);
   digitalWrite(PIN_COSLED, LOW);
@@ -467,18 +467,25 @@ void CIO::interrupt()
   if (m_source == ADCS_AUDIO) {
     m_txBuffer.get(sample, control);
     DACC->DACC_CDR = sample;
+    m_txValue      = sample;                        // Save the value for the RSSI interrupt
 
     sample = ADC->ADC_CDR[ADC_CDR_AUDIO];
     m_rxBuffer.put(sample, control);
 
     ADC->ADC_CHER = ADC_CHER_RSSI;                  // Enable the RSSI channel
-    m_source = ADCS_RSSI;
+    ADC->ADC_IER  = ADC_CHER_RSSI;                  // Enable RSSI End-Of-Conv interrupts
+    ADC->ADC_IDR  = ADC_CHER_AUDIO;                 // Disable audio End-Of-Conv interrupts
+    m_source      = ADCS_RSSI;
   } else {
+    DACC->DACC_CDR = m_txValue;
+
     sample = ADC->ADC_CDR[ADC_CDR_RSSI];
     m_rssiBuffer.put(sample);
 
     ADC->ADC_CHER = ADC_CHER_AUDIO;                 // Enable the audio channel
-    m_source = ADCS_AUDIO;
+    ADC->ADC_IER  = ADC_CHER_AUDIO;                 // Enable audio End-Of-Conv interrupts
+    ADC->ADC_IDR  = ADC_CHER_RSSI;                  // Disable RSSI End-Of-Conv interrupts
+    m_source      = ADCS_AUDIO;
   }
 #elif defined(__MBED__)
   m_pinDAC.write_u16(sample);

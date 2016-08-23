@@ -104,6 +104,7 @@ private:
   bool                 m_lockout;
 
   ADC_SOURCE           m_source;
+  uint16_t             m_txValue;
 };
 
 #endif
