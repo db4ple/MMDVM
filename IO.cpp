@@ -79,6 +79,9 @@ const uint16_t DC_OFFSET = 2048U;
 #define ADC_CHER_AUDIO         (1<<7)                 // ADC on Due pin A0  - Due AD7 - (1 << 7)
 #define ADC_ISR_EOC_AUDIO      ADC_ISR_EOC7
 #define ADC_CDR_AUDIO          7
+#define ADC_CHER_RSSI          (1<<1)                 // ADC on Due pin A6 - Due AD1 - (1 << 1) (PA3)
+#define ADC_ISR_EOC_RSSI       ADC_ISR_EOC1
+#define ADC_CDR_RSSI           1
 #define DACC_MR_USER_SEL_AUDIO DACC_MR_USER_SEL_CHANNEL0 // DAC on Due DAC0
 #define DACC_CHER_AUDIO        DACC_CHER_CH0
 #else
