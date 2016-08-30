@@ -62,9 +62,9 @@ const uint8_t MMDVM_DEBUG4       = 0xF4U;
 const uint8_t MMDVM_DEBUG5       = 0xF5U;
 
 #if defined(EXTERNAL_OSC)
-const uint8_t HARDWARE[]         = "MMDVM 20160816 24kHz RSSI TCXO (D-Star/DMR/System Fusion/CW Id)";
+const uint8_t HARDWARE[]         = "MMDVM 20160816 RSSI TCXO (D-Star/DMR/System Fusion/CW Id)";
 #else
-const uint8_t HARDWARE[]         = "MMDVM 20160816 RSSI 24kHz (D-Star/DMR/System Fusion/CW Id)";
+const uint8_t HARDWARE[]         = "MMDVM 20160816 RSSI (D-Star/DMR/System Fusion/CW Id)";
 #endif
 
 const uint8_t PROTOCOL_VERSION   = 1U;
