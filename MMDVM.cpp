@@ -18,7 +18,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#if defined(notdef)
+#if defined(notdef) || defined(__PC__)
 
 #include "Config.h"
 #include "Globals.h"
@@ -71,7 +71,12 @@ void setup()
 void loop()
 {
   serial.process();
-  
+ 
+#ifdef __PC__
+  // dummy to process interrupts
+  // TODO: move to a true IO approach
+  io.interrupt();
+#endif 
   io.process();
 
   // The following is for transmitting

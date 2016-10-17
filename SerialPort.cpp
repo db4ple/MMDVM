@@ -424,6 +424,7 @@ void CSerialPort::process()
             break;
 
           case MMDVM_GET_VERSION:
+	    printf("Hello");
             getVersion();
             break;
 
