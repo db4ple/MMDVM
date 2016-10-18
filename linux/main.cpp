@@ -1,5 +1,5 @@
 #include <Arduino.h>
-
+#include <assert.h>
 int xmain()
 {
 	setup();
@@ -19,7 +19,7 @@ bool serialPort::available()
 	int n;
 	struct timeval tv;
 	tv.tv_sec  = 0;
-	tv.tv_usec = 400;
+	tv.tv_usec = 0;
 
 	n = ::select(inFd + 1, &fds, NULL, NULL, &tv);
 	if (n > 0)
@@ -31,7 +31,7 @@ bool serialPort::available()
 }
 
 
-	void serialPort::begin(int) { inFd = ::open("/tmp/serialIn", O_RDONLY); outFd = ::open("/tmp/serialOut", O_WRONLY); }
+	void serialPort::begin(int) { inFd = ::open("/tmp/serialIn", O_RDONLY); outFd = ::open("/tmp/serialOut", O_WRONLY); assert(inFd != -1); assert(outFd != -1); }
 	size_t serialPort::write(const uint8_t* data, size_t length) { return ::write(outFd,data,length); }
 	int16_t serialPort::read()
 	{ 
