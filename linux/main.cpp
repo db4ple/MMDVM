@@ -19,7 +19,7 @@ bool serialPort::available()
 	int n;
 	struct timeval tv;
 	tv.tv_sec  = 0;
-	tv.tv_usec = 100;
+	tv.tv_usec = 400;
 
 	n = ::select(inFd + 1, &fds, NULL, NULL, &tv);
 	if (n > 0)

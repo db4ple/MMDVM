@@ -41,7 +41,7 @@ const uint16_t C4FSK_FILTER_LEN = 42U;
 static q15_t   GMSK_FILTER[] = {8, 104, 760, 3158, 7421, 9866, 7421, 3158, 760, 104, 8, 0};
 const uint16_t GMSK_FILTER_LEN = 12U;
 
-const uint16_t DC_OFFSET = 2048U;
+const uint16_t DC_OFFSET = 20480U;
 
 CIO::CIO() :
 m_started(false),
