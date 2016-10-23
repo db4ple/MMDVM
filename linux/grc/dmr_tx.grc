@@ -439,11 +439,11 @@ Using Bessel Zero Method</value>
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(296, 268)</value>
+      <value>(320, 300)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1687,7 +1687,7 @@ Using Bessel Zero Method</value>
   </connection>
   <connection>
     <source_block_id>blocks_short_to_float_0</source_block_id>
-    <sink_block_id>analog_frequency_modulator_fc_0</sink_block_id>
+    <sink_block_id>blocks_throttle_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

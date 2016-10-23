@@ -3,7 +3,7 @@
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: Top Block
-# Generated: Sun Oct 23 21:18:11 2016
+# Generated: Sun Oct 23 21:38:22 2016
 ##################################################
 
 from gnuradio import analog
@@ -47,6 +47,7 @@ class top_block(gr.top_block):
         self.osmosdr_sink_0.set_antenna("", 0)
         self.osmosdr_sink_0.set_bandwidth(0, 0)
           
+        self.blocks_throttle_0 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
         self.blocks_short_to_float_0 = blocks.short_to_float(1, -1.0/32767.0)
         self.blocks_file_source_0 = blocks.file_source(gr.sizeof_short*1, "/tmp/sampTX", False)
         self.analog_frequency_modulator_fc_0 = analog.frequency_modulator_fc(5.9065)
@@ -56,7 +57,8 @@ class top_block(gr.top_block):
         ##################################################
         self.connect((self.analog_frequency_modulator_fc_0, 0), (self.rational_resampler_xxx_0, 0))    
         self.connect((self.blocks_file_source_0, 0), (self.blocks_short_to_float_0, 0))    
-        self.connect((self.blocks_short_to_float_0, 0), (self.analog_frequency_modulator_fc_0, 0))    
+        self.connect((self.blocks_short_to_float_0, 0), (self.blocks_throttle_0, 0))    
+        self.connect((self.blocks_throttle_0, 0), (self.analog_frequency_modulator_fc_0, 0))    
         self.connect((self.rational_resampler_xxx_0, 0), (self.osmosdr_sink_0, 0))    
 
     def get_samp_rate(self):
@@ -64,6 +66,7 @@ class top_block(gr.top_block):
 
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
+        self.blocks_throttle_0.set_sample_rate(self.samp_rate)
 
 
 def main(top_block_cls=top_block, options=None):
