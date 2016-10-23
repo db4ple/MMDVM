@@ -3,7 +3,7 @@
 ##################################################
 # GNU Radio Python Flow Graph
 # Title: Top Block
-# Generated: Sun Oct 23 20:25:58 2016
+# Generated: Sun Oct 23 21:18:11 2016
 ##################################################
 
 from gnuradio import analog
@@ -26,7 +26,7 @@ class top_block(gr.top_block):
         ##################################################
         # Variables
         ##################################################
-        self.samp_rate = samp_rate = 48000
+        self.samp_rate = samp_rate = 24000
 
         ##################################################
         # Blocks
@@ -47,16 +47,16 @@ class top_block(gr.top_block):
         self.osmosdr_sink_0.set_antenna("", 0)
         self.osmosdr_sink_0.set_bandwidth(0, 0)
           
-        self.blocks_wavfile_source_0 = blocks.wavfile_source("/tmp/sampTX", True)
-        self.blocks_multiply_const_vxx_0 = blocks.multiply_const_vff((-1, ))
-        self.analog_frequency_modulator_fc_0 = analog.frequency_modulator_fc(2.9574 * 3.3333333333333333)
+        self.blocks_short_to_float_0 = blocks.short_to_float(1, -1.0/32767.0)
+        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_short*1, "/tmp/sampTX", False)
+        self.analog_frequency_modulator_fc_0 = analog.frequency_modulator_fc(5.9065)
 
         ##################################################
         # Connections
         ##################################################
         self.connect((self.analog_frequency_modulator_fc_0, 0), (self.rational_resampler_xxx_0, 0))    
-        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.analog_frequency_modulator_fc_0, 0))    
-        self.connect((self.blocks_wavfile_source_0, 0), (self.blocks_multiply_const_vxx_0, 0))    
+        self.connect((self.blocks_file_source_0, 0), (self.blocks_short_to_float_0, 0))    
+        self.connect((self.blocks_short_to_float_0, 0), (self.analog_frequency_modulator_fc_0, 0))    
         self.connect((self.rational_resampler_xxx_0, 0), (self.osmosdr_sink_0, 0))    
 
     def get_samp_rate(self):
@@ -76,11 +76,6 @@ def main(top_block_cls=top_block, options=None):
         pass
     tb.stop()
     tb.wait()
-
-
-if __name__ == '__main__':
-    main()
-tb.wait()
 
 
 if __name__ == '__main__':
