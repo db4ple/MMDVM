@@ -8,7 +8,7 @@ Install gnuradio 3.7 and gr-osmosdr
 
 
 
-Connect your RTLSDR and HackRF
+Connect your RTLSDR and HackRF, the code uses 431.875000 Mhz, configure your handheld.
 
 Adjust the HackRF Id to your Id in linux/grc/dmr_tx.py , otherwise transmit will not work.
 
