@@ -52,7 +52,7 @@ class dmr_rx_rtl(gr.top_block):
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_vff((1, ))
         self.blocks_float_to_short_0 = blocks.float_to_short(1, 200)
         self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_short*1, "/opt/dmr/sampRX", False)
-        self.blocks_file_sink_0.set_unbuffered(True)
+        self.blocks_file_sink_0.set_unbuffered(False)
         self.analog_nbfm_rx_0 = analog.nbfm_rx(
         	audio_rate=samp_rx_audio,
         	quad_rate=samp_rx_rf,

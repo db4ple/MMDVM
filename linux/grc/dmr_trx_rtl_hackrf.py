@@ -39,12 +39,12 @@ class dmr_trx_rtl_hackrf(gr.top_block):
         # Blocks
         ##################################################
         self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
-                interpolation=int(8e6),
+                interpolation=int(2e6),
                 decimation=samp_rate,
                 taps=None,
                 fractional_bw=None,
         )
-        self.osmosdr_source_0 = osmosdr.source( args="numchan=" + str(1) + " " + "rtl_sdr=0" )
+        self.osmosdr_source_0 = osmosdr.source( args="numchan=" + str(1) + " " + "rtl_sdr=0,buflen=512,buffers=8" )
         self.osmosdr_source_0.set_sample_rate(samp_rx_rf)
         self.osmosdr_source_0.set_center_freq(431.825e6, 0)
         self.osmosdr_source_0.set_freq_corr(139, 0)
@@ -57,8 +57,8 @@ class dmr_trx_rtl_hackrf(gr.top_block):
         self.osmosdr_source_0.set_antenna("", 0)
         self.osmosdr_source_0.set_bandwidth(0, 0)
           
-        self.osmosdr_sink_0 = osmosdr.sink( args="numchan=" + str(1) + " " + "hackrf=000000000000000014d463dc2f162ee1" )
-        self.osmosdr_sink_0.set_sample_rate(int(8e6))
+        self.osmosdr_sink_0 = osmosdr.sink( args="numchan=" + str(1) + " " + "hackrf=0,buffers=4" )
+        self.osmosdr_sink_0.set_sample_rate(int(2e6))
         self.osmosdr_sink_0.set_center_freq(431.875e6, 0)
         self.osmosdr_sink_0.set_freq_corr(3.5, 0)
         self.osmosdr_sink_0.set_gain(10, 0)
@@ -68,13 +68,13 @@ class dmr_trx_rtl_hackrf(gr.top_block):
         self.osmosdr_sink_0.set_bandwidth(0, 0)
           
         self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(1, (rx_xlate_taps), 50000, samp_rx_rf)
-        self.blocks_threshold_ff_0 = blocks.threshold_ff(300, 600, 0)
+        self.blocks_threshold_ff_0 = blocks.threshold_ff(400, 600, 0)
         self.blocks_short_to_float_0_1_2 = blocks.short_to_float(1, 1)
         self.blocks_short_to_float_0 = blocks.short_to_float(1, -int(scale))
         self.blocks_multiply_xx_0 = blocks.multiply_vss(1)
         self.blocks_moving_average_xx_1 = blocks.moving_average_ff(24*30, 1.0/(30*24.0), 4000)
         self.blocks_float_to_short_1 = blocks.float_to_short(1, -1.0)
-        self.blocks_float_to_short_0 = blocks.float_to_short(1, 200)
+        self.blocks_float_to_short_0 = blocks.float_to_short(1, 20)
         self.blocks_file_source_0 = blocks.file_source(gr.sizeof_short*1, "/opt/dmr/sampTX", False)
         self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_short*1, "/opt/dmr/sampRX", False)
         self.blocks_file_sink_0.set_unbuffered(True)
