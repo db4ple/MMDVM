@@ -38,10 +38,10 @@ class dmr_trx_rtl_hackrf(gr.top_block):
         self.rx_dec = rx_dec = 1
         self.max_val = max_val = 881.0
         self.fsk_deviation_hz = fsk_deviation_hz = 5000
-        self.config_ppm_rtl = config_ppm_rtl = 144
+        self.config_ppm_rtl = config_ppm_rtl = 0 
         self.config_ppm_hrf = config_ppm_hrf = 3.5
         self.config_freq = config_freq = 434.787500e6
-        self.config_delay = config_delay = 12000
+        self.config_delay = config_delay = 0 
 
         ##################################################
         # Blocks
@@ -58,9 +58,9 @@ class dmr_trx_rtl_hackrf(gr.top_block):
                 taps=None,
                 fractional_bw=None,
         )
-        self.osmosdr_source_0 = osmosdr.source( args="numchan=" + str(1) + " " + "rtl_sdr=0" )
+        self.osmosdr_source_0 = osmosdr.source( args="numchan=" + str(1) + " " + "rtl_sdr=0,buflen=512,buffers=4" )
         self.osmosdr_source_0.set_sample_rate(samp_rx_rf)
-        self.osmosdr_source_0.set_center_freq(config_freq-rx_dev+250, 0)
+        self.osmosdr_source_0.set_center_freq(config_freq-rx_dev, 0)
         self.osmosdr_source_0.set_freq_corr(config_ppm_rtl, 0)
         self.osmosdr_source_0.set_dc_offset_mode(2, 0)
         self.osmosdr_source_0.set_iq_balance_mode(0, 0)
@@ -71,18 +71,18 @@ class dmr_trx_rtl_hackrf(gr.top_block):
         self.osmosdr_source_0.set_antenna("", 0)
         self.osmosdr_source_0.set_bandwidth(0, 0)
           
-        self.osmosdr_sink_0 = osmosdr.sink( args="numchan=" + str(1) + " " + "hackrf=e1" )
+        self.osmosdr_sink_0 = osmosdr.sink( args="numchan=" + str(1) + " " + "hackrf=e1,buffers=2" )
         self.osmosdr_sink_0.set_sample_rate(int(2e6))
         self.osmosdr_sink_0.set_center_freq(config_freq, 0)
         self.osmosdr_sink_0.set_freq_corr(config_ppm_hrf, 0)
-        self.osmosdr_sink_0.set_gain(14, 0)
-        self.osmosdr_sink_0.set_if_gain(47, 0)
+        self.osmosdr_sink_0.set_gain(0, 0)
+        self.osmosdr_sink_0.set_if_gain(0, 0)
         self.osmosdr_sink_0.set_bb_gain(50, 0)
         self.osmosdr_sink_0.set_antenna("", 0)
         self.osmosdr_sink_0.set_bandwidth(0, 0)
           
         self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(rx_dec, (rx_xlate_taps), rx_dev, samp_rx_rf)
-        self.blocks_threshold_ff_0 = blocks.threshold_ff(400, 600, 0)
+        self.blocks_threshold_ff_0 = blocks.threshold_ff(10, 40, 0)
         self.blocks_short_to_float_0_1_2 = blocks.short_to_float(1, 1)
         self.blocks_short_to_float_0 = blocks.short_to_float(1, -int(scale))
         self.blocks_multiply_xx_0 = blocks.multiply_vss(1)
@@ -96,7 +96,7 @@ class dmr_trx_rtl_hackrf(gr.top_block):
         self.blocks_add_const_vxx_0 = blocks.add_const_vss((1, ))
         self.blocks_abs_xx_0 = blocks.abs_ss()
         self.analog_quadrature_demod_cf_0 = analog.quadrature_demod_cf((samp_rx_rf/rx_dec)/(2*math.pi*fsk_deviation_hz/8.0))
-        self.analog_frequency_modulator_fc_0 = analog.frequency_modulator_fc(8)
+        self.analog_frequency_modulator_fc_0 = analog.frequency_modulator_fc(7)
 
         ##################################################
         # Connections
@@ -214,8 +214,11 @@ class dmr_trx_rtl_hackrf(gr.top_block):
 
 def main(top_block_cls=dmr_trx_rtl_hackrf, options=None):
 
+    if gr.enable_realtime_scheduling() != gr.RT_OK:
+        print "Error: failed to enable real-time scheduling."
+
     tb = top_block_cls()
-    tb.start()
+    tb.start(1000)
     try:
         raw_input('Press Enter to quit: ')
     except EOFError:
