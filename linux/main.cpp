@@ -49,6 +49,7 @@ bool serialPort::available()
 	void serialPort::flush() {}
 
 serialPort Serial;
+serialPort Serial2;
 serialPort Serial3;
 
 void digitalWrite(...) {}

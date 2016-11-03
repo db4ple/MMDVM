@@ -24,11 +24,6 @@
 #include "Globals.h"
 #include "IO.h"
 
-#ifdef __PC__
-#include <sys/ioctl.h>
-#include <unistd.h>
-#include <fcntl.h>
-#endif
 #if defined(WIDE_C4FSK_FILTERS_RX)
 // Generated using rcosdesign(0.2, 4, 5, 'sqrt') in MATLAB
 static q15_t C4FSK_FILTER[] = {688, -680, -2158, -3060, -2724, -775, 2684, 7041, 11310, 14425, 15565, 14425,

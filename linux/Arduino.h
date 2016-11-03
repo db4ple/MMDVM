@@ -38,6 +38,7 @@ public:
 };
 
 extern serialPort Serial;
+extern serialPort Serial2;
 extern serialPort Serial3;
 
 extern void digitalWrite(...);
